@@ -93,7 +93,10 @@
 *参考代码见cn.andios.jdk8.stream包下StreamTest4*
     - map：参数为Function接口，进行映射操作  
     - flatMap：流的扁平化操作，比如`Stream <List<Integer>>`这种数据类型，flatMap会把多个list打通，变成`Stream <Integer>`类型  
-*参考代码见cn.andios.jdk8.stream包下StreamTest5*
+*参考代码见cn.andios.jdk8.stream包下StreamTest5，StreamTest11*
     - 方法链的调用顺序问题  
 *参考代码见cn.andios.jdk8.stream包下StreamTest8*
+    - 流的短路与并发
+*参考代码见cn.andios.jdk8.stream包下StreamTest9，StreamTest10*
+    
  
