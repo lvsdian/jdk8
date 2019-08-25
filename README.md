@@ -100,7 +100,109 @@
 *参考代码见cn.andios.jdk8.stream包下StreamTest9，StreamTest10*
     - 分组与分区  
         - 分组：Collectors.groupingBy
-        - 分区：Collectors.partitioningBy，分区是分组的一种特殊情况，分区分为true，false两种情况
+        - 分区：Collectors.partitioningBy，分区是分组的一种特殊情况，分区分为true，false两种情况  
 *参考代码见cn.andios.jdk8.stream包下StreamTest13，Student*
+### Collector
+- Collector<T, A, R>
+    - T：进行reduction operation(汇聚操作)的输入元素的类型，即流中每个元素的类型，比如List<Student>，T就是Student.
+    - A：汇聚操作的mutable accumulation type()可变累积类型)，可以理解为中间结果的类型,通常作为实现细节而隐藏。
+    - R：汇聚操作最终的结果类型。
+- Collector是一个mutable reduction operation(可变的汇聚操作)，它将输入参数累积到一个可变的结果容器中(a mutable result container),它会在所有
+    元素都处理完毕后，将累积的结果转换为一个最终的表示(这是一个可选操作)。它支持串行并行两种方式。
+- mutable reduction operations(可变的汇聚操作)有：累积元素到Collection(集合)里面；用StringBuilder拼接字符串；计算汇总信息比如sum, min, max, 
+    or average；根据卖方最大交易额计算pivot table(数据透视图)等。java.util.stream.Collectors类中提供了many common mutable reductions(很多常用的
+    可变汇聚操作)的实现。Collectors本身实际上是一个工厂。
+- 一个Collector里面有4个函数，它们协同工作将entries(条目)累积到一个可变的结果容器中，并且可选的将这个结果进行一个最终的转换。
+    - Supplier<A> supplier()：创建并返回一个新的mutable result container(可变结果容器)。A是结果容器的类型。
+    - BiConsumer<A, T> accumulator()：合并一个新的数据元素到结果容器中。A是结果容器的类型，T是待处理元素的类型。
+    - BinaryOperator<A> combiner()：与并发相关。将两个结果容器合并成一个。combiner可以将一个参数的状态合并到另一个中并返回，也可以将返回一个新的
+        结果容器。比如list1,list2,可以`list1.addAll(list2);return list1;`,也可以`list3.addAll(list1);list3.addAll(list2),return list3;`。
+        A是两个中间结果的类型。
+    - Function<A, R> finisher()：可选的对这个容器执行一个最终的转换。将中间的累积类型转换为最终的结果类型。A是中间结果类型，R是最终返回的类型。
+- Collector有一个characteristics set(即特征的集合，实际是一个叫Characteristics的枚举)，Characteristics枚举表示一个Collector的属性，用于
+    optimize reduction implementations(优化汇聚操作的实现)。
+- 使用collector来进行汇聚操作的串行实现会用supplier函数创建一个唯一的结果容器,每一个输入元素会调用accumulator函数一次，但一个并行实现会对输入
+    进行分区，针对每个区域会创建一个结果容器，累积每个分区的内容到一个subresult(子结果)中，然后用combiner函数将子结果合并为一个最终合并的结果。
+- 为了确保串行执行与并行执行产生相同的结果，collector必须满足两个条件identity(同一性) associativity(结合性)。
+    - 同一性约束是针对任何部分累积的结果来说(任何一个subresult),将它与an empty result container(一个空的结果容器)进行组合，必须生成一个等价
+        的结果。也就是说，对于一个部分累积结果a来说，a是某条线上(比如多线程环境，一个线程就是一条执行线)通过调用accumulator and combiner等 
+        操作产生的结果，必须满足 `a==combiner.apply(a, supplier.get())`，supplier.get()产生一个空的结果容器。
+    - 结合性指splitting the computation(分割计算)必须产生相同的结果。也就是说，对于任何的输入元素t1,t2，结果r1,r2，在以下的计算中r1应该等于r2。
+        ```java
+        //result without splitting
+        //通过supplier.get()得到a1这个累积结果容器
+        A a1 = supplier.get();
+        //t1累积到a1中
+        accumulator.accept(a1, t1);
+        //t2累积到a1中
+        accumulator.accept(a1, t2);
+        //将a1转换成最终的结果容器r1并返回
+        R r1 = finisher.apply(a1);      
+  
+        // result with splitting
+        //第一个线程通过supplier.get()得到a2这个累积结果容器
+        A a2 = supplier.get();
+        //t1累积到a2中
+        accumulator.accept(a2, t1);
+        //第二个线程通过supplier.get()得到a3这个累积结果容器
+        A a3 = supplier.get();
+        //t2累积到a3中
+        accumulator.accept(a3, t2);
+        //将a2与a3两个同类型的不同对象(两个subresult)合并，再转换成最终的结果容器r2并返回
+        R r2 = finisher.apply(combiner.apply(a2, a3));
+        ```
+- 对于没有 UNORDERED characteristic(无序特性)的collector来说(UNORDERED是Characteristics枚举的一个元素)，两个累积的结果a1与a2如果满足`finisher.apply(a1).equals(finisher.apply(a2))`,
+    那么a1与a2等价。对于无序的collector来说，equivalence is relaxed(等价性要求就放松了)，会考虑到顺序上的区别对应的不相等性。比如一个无序的collector累积到一个list中，
+    在考虑两个list是否相等时，只考虑包含的元素是否相同，忽略了顺序。
+- 基于Collector来implement reduction(实现汇聚)的库,比如`java.util.stream.Stream.collect(java.util.stream.Collector<? super T,A,R>)`，
+    必须遵守如下的约定：
+    - 传递给accumulator函数的第一个参数，传递给combiner函数的两个参数，传递给finisher函数的参数都必须是上一次调用supplier，accumulator，combiner函数返回的结果类型。
+    - 对于实现来说，不应该对supplier,accumulator,combiner函数返回的中间结果进行任何操作，除了将这些中间结果再次传递给accumulator,combiner,finisher
+        函数，或者直接将他们返回给汇聚操作的调用者。
+    - 如果一个结果被传给combiner 或者 finisher函数，但是the same object(相同的对象)没有从这个函数中返回，那么它就不会再被使用了。即说明在combiner或者finisher
+        里面生成了新的对象，之前传递的结果已经用完了，不会再被使用。
+    - 一个结果一旦传递给combiner or finisher函数后，就不会再传递给accumulator函数了。
+    - 对于非并发的收集器来说，任何从supplier, accumulator,combiner函数中返回的结果一定是serially thread-confined(线程限定，即只在当前线程执行，不会被其他的线程使用)。
+        这使得collector可以在并行环境下执行而无需实现任何额外的同步操作。reduction implementation(汇聚操作的实现)必须确保输入被合适的进行分区，各个分区processed in isolation
+        (单独的隔离的进行处理)。只有当所有的accumulation完成后才会进行combining。
+    - 对于并发的收集器来说，实现可以自由选择implement reduction concurrently(并发实现汇聚操作)，A concurrent reduction(一个并发的汇聚操作)是指,accumulator函数
+        在multiple threads(多个线程)里面调用，会使用the same concurrently-modifiable(同一个可以并发修改的)结果容器，而不是保持各个结果独立。一个concurrent reduction
+        (并发的汇聚操作)只有在无序时才会(be applied)被应用,要么有Characteristics枚举的UNORDERED，要么原始数据是无序的。
+- 除了在java.util.stream.Collectors中预定义的实现之外，也可以用`java.util.stream.Collector.of(...)`静态工厂方法来construct collectors(构建收集器),比如说
+    你可以创建一个收集器，将widgets累积到一个TreeSet中：
+        ```java
+Collector<Widget, ?, TreeSet<Widget>> intoSet =
+                  Collector.of(TreeSet::new, TreeSet::add,
+                               (left, right) -> { left.addAll(right); return left; });
+        ```
+    - TreeSet::new：对应Supplier<R> supplier，即new一个TreeSet作为结果容器
+    - TreeSet::add：BiConsumer<R, T> accumulator，每次调用TreeSet的add方法，将Widget累积到TreeSet容器中。
+    - (left, right) -> { left.addAll(right); return left; }：用于多线程处理，将一个TreeSet类型的结果容器全部添加到另一个TreeSet结果容器中，再返回这个结果容器。  
+    这个操作还可以通过the predefined collector(预定义的收集器)来`java.util.stream.Collectors.toCollection`来实现。
+- 使用收集器进行汇聚操作生成的结果与以下等同：
+    ```java
+    R container = collector.supplier().get();
+    for (T t : data)
+        collector.accumulator().accept(container, t);
+    return collector.finisher().apply(container);
+    ```
+- 然而库可以自由的对输入进行分区，在每个分区上执行汇聚操作，然后使用combiner函数将各个部分结果进行合并来实现一个并行的汇聚操作，取决于具体的汇聚操作，这种操作
+    可能更好可能更差，取决于accumulator 和 combiner函数的the relative cost(相对成本)。说明并行流效率不一定比串行流效率高。
+- Collectors(收集器)被设计成composed(可以组合的)，`java.util.stream.Collectors`里面的很多方法都是一个函数，它们接收一个collector并生成一个新的collector,
+    比如给定如下collector，它会计算工资的总和(流里面是员工，计算员工的工资总和)。
+    ```java
+     Collector<Employee, ?, Integer> summingSalaries = Collectors.summingInt(Employee::getSalary))
+    ```
+    如果我们想要创建一个收集器，他会根据部门对工资进行tabulate(计算，汇总，表格化),我们可以重用上面的逻辑，
+    使用`java.util.stream.Collectors.groupingBy(java.util.function.Function<? super T,? extends K>, java.util.stream.Collector<? super T,A,D>)`
+    这个方法：
+    ```java
+    Collector<Employee, ?, Map<Department, Integer>> summingSalariesByDept = Collectors.groupingBy(Employee::getDepartment, summingSalaries);
+    ```
+        
+
+
+
+
     
  
