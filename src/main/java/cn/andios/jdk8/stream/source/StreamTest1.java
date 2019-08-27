@@ -36,22 +36,22 @@ public class StreamTest1 {
         //先根据分数分组，所以返回的map的键类型为Integer，值的类型为List<Student>
         //再将List<Student>根据姓名进行分组，所以键的类型为String,值得类型为List<Student>
         Map<Integer,Map<String,List<Student>>> map1=  studentList.stream().collect(groupingBy(Student::getScore,groupingBy(Student::getName)));
-        System.out.println(map1);
+        System.out.println("map1：" + map1);
         System.out.println("------------------------");
 
         Map<Boolean, List<Student>> map2 = studentList.stream().collect(partitioningBy(student -> student.getScore() > 90));
-        System.out.println(map2);
+        System.out.println("map2：" + map2);
         System.out.println("------------------------");
 
         Map<Boolean, Map<Boolean, List<Student>>> map3 = studentList.stream().collect(partitioningBy(student -> student.getScore() > 80, partitioningBy(student -> student.getScore() > 90)));
-        System.out.println(map3);
+        System.out.println("map3：" + map3);
         System.out.println("------------------------");
 
         Map<Boolean, Long> map4 = studentList.stream().collect(partitioningBy(student -> student.getScore() > 90, counting()));
-        System.out.println(map4);
+        System.out.println("map4：" + map4);
         System.out.println("-------------------------");
 
         Map<String, Student> map5 = studentList.stream().collect(groupingBy(Student::getName, collectingAndThen(minBy(Comparator.comparingInt(Student::getScore)), Optional::get)));
-        System.out.println(map5);
+        System.out.println("map5：" + map5);
     }
 }

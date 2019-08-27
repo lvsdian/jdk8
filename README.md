@@ -219,6 +219,8 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     `Map<Boolean, List<Student>> passingFailing = students.stream().collect(Collectors.partitioningBy(s -> s.getGrade() >= PASS_THRESHOLD));`
 - 收集器多级分组分区  
 *参考代码见cn.andios.jdk8.stream.source包下StreamTest1,Student*
+- 收集器案例及类型推断推断特例  
+*参考代码见cn.andios.jdk8.stream.source包下MyComparatorTest*
     
     
     
