@@ -15,7 +15,7 @@
 *参考代码见cn.andios.jdk8包下FunctionTest*
 - compose：`function1.compose(function2).apply(a)`会先对a执行function2,再将结果执行function1，function1和function2具体 
 做什么，由用户调用时确定。
-- andThen：`function1.compose(function2).apply(a)`会先对a执行function1,再将结果执行function2，function1和function2具体
+- andThen：`function1.andThen(function2).apply(a)`会先对a执行function1,再将结果执行function2，function1和function2具体
 做什么，由用户调用时确定。  
 ##### BiFunction接口(两个输入参数，一个输出结果)
 - apply：`biFunction.apply(a,b)`将a,b两个输入参数执行某个操作，怎么操作由用户调用函数时确定。
@@ -170,7 +170,7 @@
         (并发的汇聚操作)只有在无序时才会(be applied)被应用,要么有Characteristics枚举的UNORDERED，要么原始数据是无序的。
 - 除了在java.util.stream.Collectors中预定义的实现之外，也可以用`java.util.stream.Collector.of(...)`静态工厂方法来construct collectors(构建收集器),比如说
     你可以创建一个收集器，将widgets累积到一个TreeSet中：
-        ```java
+        ```
 Collector<Widget, ?, TreeSet<Widget>> intoSet =
                   Collector.of(TreeSet::new, TreeSet::add,
                                (left, right) -> { left.addAll(right); return left; });
@@ -178,7 +178,7 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     - TreeSet::new：对应Supplier<R> supplier，即new一个TreeSet作为结果容器
     - TreeSet::add：BiConsumer<R, T> accumulator，每次调用TreeSet的add方法，将Widget累积到TreeSet容器中。
     - (left, right) -> { left.addAll(right); return left; }：用于多线程处理，将一个TreeSet类型的结果容器全部添加到另一个TreeSet结果容器中，再返回这个结果容器。  
-    这个操作还可以通过the predefined collector(预定义的收集器)来`java.util.stream.Collectors.toCollection`来实现。
+    这个操作还可以通过the predefined collector(预定义的收集器)`java.util.stream.Collectors.toCollection`来实现。
 - 使用收集器进行汇聚操作生成的结果与以下等同：
     ```java
     R container = collector.supplier().get();
@@ -199,6 +199,31 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     ```java
     Collector<Employee, ?, Map<Department, Integer>> summingSalariesByDept = Collectors.groupingBy(Employee::getDepartment, summingSalaries);
     ```
+### Collectors
+- `java.util.stream.Collectors`是`java.util.stream.Collector`的实现，实现了很多有用的reduction operations(汇聚操作)，比如说，将元素累积到集合中，
+    根据various criteria(各种各样的标准)，获取元素的summarizing(摘要)。
+- 如下的例子是使用预定义的收集器去实现常用的可变汇聚任务：
+    - 将name累积到List中  
+    `List<String> list = people.stream().map(Person::getName).collect(Collectors.toList());`
+    - 将name累积到TreeSet中  
+    `Set<String> set = people.stream().map(Person::getName).collect(Collectors.toCollection(TreeSet::new));`
+    - 将元素转为字符串，将字符串拼接起来，各个字符串间用逗号分割  
+    `String joined = things.stream().map(Object::toString).collect(Collectors.joining(", "));`
+    - 计算员工工资总和  
+    `int total = employees.stream().collect(Collectors.summingInt(Employee::getSalary)));`
+    - 根据部门将员工分组  
+    `Map<Department, List<Employee>> byDept = employees.stream().collect(Collectors.groupingBy(Employee::getDepartment));`
+    - 根据部门计算工资总数  
+    `Map<Department, Integer> totalByDept = employees.stream()..collect(Collectors.groupingBy(Employee::getDepartment,Collectors.summingInt(Employee::getSalary)));`
+    - 将学生分为通过和未通过两个部分  
+    `Map<Boolean, List<Student>> passingFailing = students.stream().collect(Collectors.partitioningBy(s -> s.getGrade() >= PASS_THRESHOLD));`
+- 收集器多级分组分区  
+*参考代码见cn.andios.jdk8.stream.source包下StreamTest1,Student*
+    
+    
+    
+
+
         
 
 
