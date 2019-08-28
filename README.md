@@ -219,9 +219,14 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     `Map<Boolean, List<Student>> passingFailing = students.stream().collect(Collectors.partitioningBy(s -> s.getGrade() >= PASS_THRESHOLD));`
 - 收集器多级分组分区  
 *参考代码见cn.andios.jdk8.stream.source包下StreamTest1,Student*
-- 收集器案例及类型推断推断特例  
+### Comparator  
+- java.util.Comparator.thenComparing(java.util.Comparator<? super T>)  
+    - 当第一个比较器返回两个元素相等时，thenComparing里面的比较器就会用于进一步比较这两个元素的顺序，只有它前面的那个比较器认为两个元素相等，
+    thenComparing才会发生作用。
+    - 如果第一个比较器是Serializable，那么thenComparing里面的比较器也是Serializable
+    - 比如将字符串现根据长度比较，再忽略大小写以自然顺序比较：  
+    `Comparator<String> cmp = Comparator.comparingInt(String::length).thenComparing(String.CASE_INSENSITIVE_ORDER);`  
 *参考代码见cn.andios.jdk8.stream.source包下MyComparatorTest*
-    
     
     
 
