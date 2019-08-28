@@ -199,6 +199,11 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     ```java
     Collector<Employee, ?, Map<Department, Integer>> summingSalariesByDept = Collectors.groupingBy(Employee::getDepartment, summingSalaries);
     ```
+- PS：在java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)中可以看到，如果collector的Characteristics中
+有"IDENTITY_FINISH"，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
+如果我们不能确保中间容器类型到最终容器类型可以强转的话，不能加IDENTITY_FINISH,不然会出错。
+- 自定义收集器实现  
+*参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl*
 ### Collectors
 - `java.util.stream.Collectors`是`java.util.stream.Collector`的实现，实现了很多有用的reduction operations(汇聚操作)，比如说，将元素累积到集合中，
     根据various criteria(各种各样的标准)，获取元素的summarizing(摘要)。
@@ -227,6 +232,7 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     - 比如将字符串现根据长度比较，再忽略大小写以自然顺序比较：  
     `Comparator<String> cmp = Comparator.comparingInt(String::length).thenComparing(String.CASE_INSENSITIVE_ORDER);`  
 *参考代码见cn.andios.jdk8.stream.source包下MyComparatorTest*
+
     
     
 
