@@ -199,11 +199,16 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     ```java
     Collector<Employee, ?, Map<Department, Integer>> summingSalariesByDept = Collectors.groupingBy(Employee::getDepartment, summingSalaries);
     ```
-- PS：在java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)中可以看到，如果collector的Characteristics中
-有"IDENTITY_FINISH"，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
-如果我们不能确保中间容器类型到最终容器类型可以强转的话，不能加IDENTITY_FINISH,不然会出错。
 - 自定义收集器实现  
 *参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl*
+- java.util.stream.Collector.Characteristics.IDENTITY_FINISH  
+    在java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)中可以看到，如果collector的Characteristics中
+    有"IDENTITY_FINISH"，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
+    如果我们不能确保中间容器类型到最终容器类型可以强转的话，不能加IDENTITY_FINISH,不然会出错。  
+- java.util.stream.Collector.Characteristics.CONCURRENT  
+    表示收集器是并行的，意味着结果容器可以支持累加器函数并行的被调用，即多个线程同时操作同一个结果容器。如果不加CONCURRENT，那么几个线程就会操作几个结果容器，
+    再使用combiner将它们合并。  
+*参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl2*
 ### Collectors
 - `java.util.stream.Collectors`是`java.util.stream.Collector`的实现，实现了很多有用的reduction operations(汇聚操作)，比如说，将元素累积到集合中，
     根据various criteria(各种各样的标准)，获取元素的summarizing(摘要)。
