@@ -201,11 +201,11 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     ```
 - 自定义收集器实现  
 *参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl*
-- java.util.stream.Collector.Characteristics.IDENTITY_FINISH  
+- java.util.stream.Collector.Characteristics.**IDENTITY_FINISH**  
     在java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)中可以看到，如果collector的Characteristics中
     有"IDENTITY_FINISH"，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
     如果我们不能确保中间容器类型到最终容器类型可以强转的话，不能加IDENTITY_FINISH,不然会出错。  
-- java.util.stream.Collector.Characteristics.CONCURRENT  
+- java.util.stream.Collector.Characteristics.**CONCURRENT**  
     表示收集器是并行的，意味着结果容器可以支持累加器函数并行的被调用，即多个线程同时操作同一个结果容器。如果不加CONCURRENT，那么几个线程就会操作几个结果容器，
     再使用combiner将它们合并。  
 *参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl2*
@@ -229,6 +229,128 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     `Map<Boolean, List<Student>> passingFailing = students.stream().collect(Collectors.partitioningBy(s -> s.getGrade() >= PASS_THRESHOLD));`
 - 收集器多级分组分区  
 *参考代码见cn.andios.jdk8.stream.source包下StreamTest1,Student*
+- java.util.stream.Collectors.**groupingBy(java.util.function.Function<? super T,? extends K>)**
+    ```java
+        public static <T, K> Collector<T, ?, Map<K, List<T>>>
+        groupingBy(Function<? super T, ? extends K> classifier) {
+            return groupingBy(classifier, toList());
+        }
+    ```
+    返回值`Collector<T, ?, Map<K, List<T>>>`中，T为元素类型，?代表中间结果类型，由于调用者只关心输入，输出，不关心如何实现，所以这里用?表示，
+    Map<K, List<T>>为最终的结果类型。
+- java.util.stream.Collectors.**groupingBy(java.util.function.Function<? super T,? extends K>, java.util.stream.Collector<? super T,A,D>)**
+    ```java
+        public static <T, K, A, D>
+        Collector<T, ?, Map<K, D>> groupingBy(Function<? super T, ? extends K> classifier,
+                                              Collector<? super T, A, D> downstream) {
+            return groupingBy(classifier, HashMap::new, downstream);
+        }
+    ```
+    **接收一个Function和收集器，返回一个收集器，实际是将Function应用到接收的收集器中，将其收集过程进行一系列的转换，再将转换后的收集器返回。**
+    - Collector<T, ?, Map<K, D>>：
+        - T：元素类型
+        - K：classifier(分类器)返回的结果类型，即map得key，根据它进行分组
+        - D：返回的map的value的类型
+- java.util.stream.Collectors.**groupingBy(java.util.function.Function<? super T,? extends K>, java.util.function.Supplier<M>, java.util.stream.Collector<? super T,A,D>)**
+    ```java
+        public static <T, K, D, A, M extends Map<K, D>>
+        Collector<T, ?, M> groupingBy(Function<? super T, ? extends K> classifier,
+                                      Supplier<M> mapFactory,
+                                      Collector<? super T, A, D> downstream) {
+            //得到downstream的supplier对象                      
+            Supplier<A> downstreamSupplier = downstream.supplier();
+            //得到downstream的accumulator对象
+            BiConsumer<A, ? super T> downstreamAccumulator = downstream.accumulator();
+            //构造最终返回的收集器的accumulator对象
+            BiConsumer<Map<K, A>, T> accumulator = (m, t) -> {
+                //classifier返回结果作为map的key
+                K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+                //java.util.Map.computeIfAbsent：给定一个键，判断map里面是否有对应的值，如果有直接返回这个值，
+                //如果没有，应用一个Function，把键映射成出一个结果，如果这个结果不为空，将键-结果放入map，返回这个结果，如果结果为空，返回空
+                //这里作用是根据key判断map里面是否有对应的value,这里的vlaue是容器对象，有的话，取出来，没有，就用downstreamSupplier的容器对象
+                A container = m.computeIfAbsent(key, k -> downstreamSupplier.get());
+                //将元素t累积到中间结果container中
+                downstreamAccumulator.accept(container, t);
+            };
+            //mapMerger：将右边参数合并到左边参数中，完成两个map的合并
+            BinaryOperator<Map<K, A>> merger = Collectors.<K, A, Map<K, A>>mapMerger(downstream.combiner());
+            @SuppressWarnings("unchecked")
+            //supplier返回的肯定是当前收集器的中间结果类型，根据上面，中间结果类型为Map<K,A>类型，所以这里强转一定成功
+            Supplier<Map<K, A>> mangledFactory = (Supplier<Map<K, A>>) mapFactory;
+            //包含`IDENTITY_FINISH`，则表示combiner执行后的结果为最终结果，不再应用finisher
+            if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+                return new CollectorImpl<>(mangledFactory, accumulator, merger, CH_ID);
+            }
+            else {//自己提供finisher对象
+                @SuppressWarnings("unchecked")
+                Function<A, A> downstreamFinisher = (Function<A, A>) downstream.finisher();
+                Function<Map<K, A>, M> finisher = intermediate -> {
+                    //java.util.Map.replaceAll：根据传入的函数将所有的value替换，直到所有的value被替换或者这个函数抛出异常
+                    intermediate.replaceAll((k, v) -> downstreamFinisher.apply(v));
+                    @SuppressWarnings("unchecked")
+                    //M才是最终的结果类型
+                    M castResult = (M) intermediate;
+                    return castResult;
+                };
+                return new CollectorImpl<>(mangledFactory, accumulator, merger, finisher, CH_NOID);
+            }
+        }
+    ```
+    - 返回一个收集器对T类型的输入元素实现了层叠的group by操作，根据一个分类函数对元素进行分组，然后使用给定的downstream收集器根据给定的key所关联的值进行汇聚操作。由
+        收集器生成的map是根据supplier工厂函数创建的。即输入参数中的`Supplier<M> mapFactory`
+    - 分类器函数会将元素映射成某个键的类型K(即输入参数中`Function<? super T, ? extends K> classifier`,将T映射成K)，downstream收集器会操作T类型元素生成一个
+        D类型结果(即输入参数`Collector<? super T, A, D> downstream`，将T收集到D类型结果容器中)，最终的类型为`Map<K, D>`
+    - 比如说，计算每个城市中的人的性姓的集合，而且城市的名称是排序好的：  
+        `Map<City, Set<String>> namesByCity = people.stream().collect(groupingBy(Person::getCity, TreeMap::new,mapping(Person::getLastName, toSet())));`
+    - 最终返回的collector并不是并发的，对于并行流管道来说，combiner函数会将一个map的key合并到另一个map中，这是成本比较高的一个操作，如果元素顺序的保存对downstream收集器来说
+        元素顺序不是必须的话，推荐使用groupingByConcurrent。
+- java.util.stream.Collectors.**groupingByConcurrent(java.util.function.Function<? super T,? extends K>, java.util.function.Supplier<M>, java.util.stream.Collector<? super T,A,D>)**
+    ```java
+        public static <T, K, A, D, M extends ConcurrentMap<K, D>>
+        Collector<T, ?, M> groupingByConcurrent(Function<? super T, ? extends K> classifier,
+                                                Supplier<M> mapFactory,
+                                                Collector<? super T, A, D> downstream) {
+            Supplier<A> downstreamSupplier = downstream.supplier();
+            BiConsumer<A, ? super T> downstreamAccumulator = downstream.accumulator();
+            BinaryOperator<ConcurrentMap<K, A>> merger = Collectors.<K, A, ConcurrentMap<K, A>>mapMerger(downstream.combiner());
+            @SuppressWarnings("unchecked")
+            Supplier<ConcurrentMap<K, A>> mangledFactory = (Supplier<ConcurrentMap<K, A>>) mapFactory;
+            BiConsumer<ConcurrentMap<K, A>, T> accumulator;
+            //如果包含CONCURRENT
+            if (downstream.characteristics().contains(Collector.Characteristics.CONCURRENT)) {
+                accumulator = (m, t) -> {
+                    K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+                    A resultContainer = m.computeIfAbsent(key, k -> downstreamSupplier.get());
+                    downstreamAccumulator.accept(resultContainer, t);
+                };
+            }
+            else {//不包含CONCURRENT，会进行同步操作
+                accumulator = (m, t) -> {
+                    K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
+                    A resultContainer = m.computeIfAbsent(key, k -> downstreamSupplier.get());
+                    synchronized (resultContainer) {
+                        downstreamAccumulator.accept(resultContainer, t);
+                    }
+                };
+            }
+    
+            if (downstream.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)) {
+                return new CollectorImpl<>(mangledFactory, accumulator, merger, CH_CONCURRENT_ID);
+            }
+            else {
+                @SuppressWarnings("unchecked")
+                Function<A, A> downstreamFinisher = (Function<A, A>) downstream.finisher();
+                Function<ConcurrentMap<K, A>, M> finisher = intermediate -> {
+                    intermediate.replaceAll((k, v) -> downstreamFinisher.apply(v));
+                    @SuppressWarnings("unchecked")
+                    M castResult = (M) intermediate;
+                    return castResult;
+                };
+                return new CollectorImpl<>(mangledFactory, accumulator, merger, finisher, CH_CONCURRENT_NOID);
+            }
+        }
+    ```
+    - 使用groupingByConcurrent需要满足两个条件：**CONCURRENT**，**UNORDERED**
 ### Comparator  
 - java.util.Comparator.thenComparing(java.util.Comparator<? super T>)  
     - 当第一个比较器返回两个元素相等时，thenComparing里面的比较器就会用于进一步比较这两个元素的顺序，只有它前面的那个比较器认为两个元素相等，
