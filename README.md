@@ -359,8 +359,47 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
     - 比如将字符串现根据长度比较，再忽略大小写以自然顺序比较：  
     `Comparator<String> cmp = Comparator.comparingInt(String::length).thenComparing(String.CASE_INSENSITIVE_ORDER);`  
 *参考代码见cn.andios.jdk8.stream.source包下MyComparatorTest*
-
+### Stream Source
+- java.util.stream.**Stream**
+    - 流是一个支持串行与并行聚合操作的元素序列，如下实例演示了使用Stream与IntStream进行聚合操作：
+        ```java
+              int sum = widgets.stream()
+                               .filter(w -> w.getColor() == RED)
+                               .mapToInt(w -> w.getWeight())
+                               .sum();
+        ```
+        在这个例子中，widgets是一个集合，我们通过`Collection.stream()`创建了一个widget对象流，对他进行过滤生成了一个只包含color为红色的新的Stream，然后将它转为一个
+        int值的Stream,这个int值Steam代表了每个红色widget的重量，然后这个流会汇总起来生成一个总的重量。
+    - 除了java.util.stream.Stream之外，本身是a stream of object references(一个对象引用流)，还有一些原生特化的比如IntStream，LongStream,DoubleStream，它们也被称为流，
+        并且符合流的特征与约束。
+    - 为了执行流的计算，流的操作会被组合到stream pipeline(流管道)中，一个流管道由源(可能是an array, a collection, a generator function, an I/O channel等)，一个或多个
+        中间操作(将一个流转为另外一个流)，一个终止操作(生成一个结果或副作用)组成。流是延迟的，只有当终止操作被发起时，对源的计算才会开始，源里面的元素只有在需要时才会被消费
+    - Collections与流，虽然由相似性，但目标是不同的，集合主要是实现对元素的高效管理与访问。与之相反，流并没有提供直接访问或者操作它们的元素的方式，而关注以声明的方式描述
+        它们的源和计算性的操作，这些计算行的操作会被聚合起来应用到源上。然而，如果所提供的流操作并没有提供我们所期望的功能，那么`java.util.stream.BaseStream.iterator` ，
+        `java.util.stream.BaseStream.spliterator`就可以用于执行controlled traversal(可控制的遍历).
+    - 一个流管道，就像上面实例中的widgets，可以看作是对流的源的查询，除非这个流被显式的设计成可以并发修改的，比如java.util.concurrent.ConcurrentHashMap，否则可能会发生错误。
+    - 大多数的流操作都会接收描述用户指定行为的参数，比如上面例子中的lambda表达式`w -> w.getWeight()`传给mapToInt函数。为了保证得到一个正确的结果，传递的lambda
+        表达式必须满足以下条件：
+        - 必须是non-interfering(互不干扰的)，不修改流的源。
+        - 在大多数情况下必须是stateless(无状态的)，结果不应该依赖于流管道执行过程中可能会改变的任何状态。
+    - 这些参数都是函数式接口的实例，通常都是lambda表达式或者方法引用，除非特别指名，否则这些参数不能为空。
+    - 一个流只能被操作(调用一个中间操作或一个终止操作)一次，这个规则，比如说，"forked" streams(派生的流)相同的源会提供两个或多个pipelines,或者对相同的流执行多次遍历，一个
+        流实现如果被检测到重用了，可能会抛出`IllegalStateException`异常。但有些流操作可能会返回它们的接收者而不是新的流对象，这种情况就不会检测到重用了。
+    - 流有一个close()方法，并且实现了`java.lang.AutoCloseable`这个接口。但是几乎所有的流实例不需要在使用完后关闭。一般来说，只有流的源是
+        IO通道(比如从`java.nio.file.Files.lines(java.nio.file.Path, java.nio.charset.Charset`里返回的)，才是需要关闭的。大多数流的底层都是collections, arrays, 
+        or generating functions，并不需要特殊的资源管理。如果一个流需要关闭，那么它可以在try(...)里声明。
+    - 流管道可以以串行或并行的方式执行，这种执行模式只是流的一个属性，流创建时会有一个串行或并行执行的初始选择。比如，`java.util.Collection.stream`会创建一个串行流，
+        `java.util.Collection.stream`会创建一个并行流。这种执行模式还可以通过`java.util.stream.BaseStream.sequential`或`java.util.stream.BaseStream.parallel`
+        方法修改。并且可以通过`java.util.stream.BaseStream.isParallel`方法查询。
+- java.util.stream.BaseStream.**onClose**
+    - 返回一个等价的流并且附带一个额外的close handler(关闭处理器)，当流的close()方法被调用时关闭处理器会按照被添加的顺序运行，如果最先调用的关闭处理器发生异常，其他关闭
+        处理器会正常运行。任何一个关闭处理器抛出异常时，第一个抛出的异常会传递给close()方法的调用者，其他的异常会作为被压制的异常添加到那个异常中，除非剩下的异常中有与第
+        一个异常相同的异常，毕竟一个异常不会压制它自己。  
+    *参考代码见cn.andios.jdk8.stream.source包下StreamTest2*
+    - 这是一个中间操作。
+                   
     
+
     
 
 
