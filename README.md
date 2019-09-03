@@ -397,6 +397,148 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
         一个异常相同的异常，毕竟一个异常不会压制它自己。  
     *参考代码见cn.andios.jdk8.stream.source包下StreamTest2*
     - 这是一个中间操作。
+### java.util.Spliterator
+- 分割迭代器(Spliterator)是用于对源中的元素进行遍历和分区(分成若干个区域)的一个对象，被分割迭代器所覆盖的源可以是数组，集合，IO通道或者a generator function(生成器函数)。
+- 一个分割迭代器可以单独的一个一个的遍历元素，对应方法为`java.util.Spliterator.tryAdvance`，也可以顺序的一块一块的遍历，对应方法为`java.util.Spliterator.forEachRemaining`。
+- 一个分割迭代器还可以对它的元素进行分区，对应方法为`java.util.Spliterator.trySplit`,分成另外一个分割迭代器,以并行的操作来使用。使用分割迭代器的操作如果不能分割，或者可以分割
+    但分割后很不平衡或者效率非常低时，就无法利用并行的优势了。遍历或者分割都会消耗元素，每个分割迭代器只对一小块有用。
+- 分割迭代器会报告一个它的结构、源、元素等特性值的集合，有ORDERED，DISTINCT，SORTED，SIZED，NONNULL，IMMUTABLE，CONCURRENT，SUBSIZED。这些可以被一个分割迭代器的客户端使用来
+    控制、具体化或简化计算。比如说，一个Collection的分割迭代器会报告一个SIZED,一个Set的分割迭代器会报告DISTINCT，一个SortedSet的分割迭代器会报告SORTED。Characteristics会作
+    为一个简单的位操作(Collector中通过枚举来表示，这里是通过16进制位操作来计算)来报告。  
+    有一些限定值会额外的限制方法的行为。比如，如果是ORDERED，那么遍历方法必须遵循它们在文档中定义好的顺序。未来可能会定义一些新的特性，所以不要给没有列出来的值赋予新的含
+    义(即这里特性值定义了8个，我们的实现代码中不应该再定义其他的，因为以后的jdk版本可能会定义新的特性值，万一jdk新定义的与我们自己定义的名称相同意义不同就出问题了)
+- 一个分割迭代器如果不报告IMMUTABLE或者CONCURRENT就被期望有一个文档化的策略的考量。当分割迭代器绑定到元素的源上时，在绑定之后，要对元素源的结构的修改做出检测。一个延迟绑定的分割
+    迭代器会在第一次遍历，第一次分割，或在第一次查询元素大小时绑定到元素的源上，不是在分割迭代器创建的时候就绑定了。一个不是延迟绑定的分割迭代器会在刚创建时或者分割迭代器中任何
+    一个方法得到调用时绑定到元素的源上。如果对源的修改发生在绑定之前，那么当分割迭代器遍历时这些修改就会反应出来。当分割迭代器已经被绑定到某个源上，这时再去修改源，就会抛出
+    `java.util.ConcurrentModificationException`。如果一个分割迭代器按照这种方式来行事的，就被称为fail-fast(快速失败)。分割迭代器中`forEachRemaining`这个按块遍历的方法
+    会优化遍历，在所有元素遍历完后检测结构的修改而不是一个元素一个元素的检查并立即失败。
+- 分割迭代器可以通过`java.util.Spliterator.estimateSize`方法对还没有处理的元素进行数量的估算。在理想情况下，如果特性值包含SIZED，那么估算的值一定等于接下来要去遍历的
+    元素数量。然而，即便不能精确的知道待遍历元素的数量，一个估算的值对源的操作也是很有帮助的，比如说帮助你确定是否进一步分割或者以串行的方式进行遍历剩下的元素。
+- 尽管在并行算法中存在这些显著的功能，分割迭代器并不被要求是线程安全的。相反的，使用分割迭代器实现了并行算法的实现，应该确保分割迭代器一次只能被唯一一个线程使用。这通常可以
+    很简单的通过serial thread-confinement(串行线程围栏)来实现，串行线程围栏这样一种模式通常是通过递归解耦的典型并行算法的自然结果。如果初始的线程将分割迭代器交由另外一个线程
+    处理时，这种情况下一定要在tryAdvance方法遍历元素开始之前完成，一旦遍历开始再将分割迭代器交由其他线程处理，就不能保证结果的有效性。
+- 分割迭代器原生子类型的特化版本由`java.util.Spliterator.OfInt`,`java.util.Spliterator.OfLong`,`java.util.Spliterator.OfDouble`提供.子类型
+    中`java.util.Spliterator.tryAdvance`、`java.util.Spliterator.forEachRemaining`的默认实现将原生的值包装成对应类的实例，这种包装相对于原生类型的特化
+    可能影响了性能上的优势.为了避免装箱这种操作，相应的基于原生值的方法应该被使用。比如说，`java.util.Spliterator.OfInt.tryAdvance(java.util.function.IntConsumer)`,
+    `java.util.Spliterator.OfInt.forEachRemaining(java.util.function.IntConsumer)`应该比`java.util.Spliterator.tryAdvance`,
+    `java.util.Spliterator.forEachRemaining`优先使用。使用基于装箱方法的原生值遍历`java.util.Spliterator.tryAdvance`,`java.util.Spliterator.forEachRemaining`
+    并不会影响值的顺序，会按照装箱之后的值的顺序进行遍历。
+- 分割迭代器就像(java.util.Iterator)迭代器一样，用于遍历源当中的元素，分割迭代器的API除了串行遍历之外，也被设计成并行的高效的遍历操作，通过支持解耦以及single-element iteration
+    (单元素的遍历)。此外，通过分割迭代器访问元素的协议被设计成相比于迭代器施加更小的每个元素的负担(即相比于迭代器，分割迭代器的成本更低。)，避免了hasNext()方法与next()方法调
+    用的竞争(即原来使用迭代器时，hasNext()与next()配套使用，现在改用分割迭代器的方式，一个方法(tryAdvance)完成两个方法的功能)。
+- 对于可变的源来说，在分割迭代器绑定到数据源上到遍历结束之间，如果源的结构被修改(指元素的添加，替换，删除)了，那么任意的不确定的行为可能会发生。比如中，在使用流框架时这种修改
+    可能会生成任意的不确定的结果。
+- 一个源结构上的修改可以通过如下的几种方式进行管理。
+    - 源的结构性不能被改变。
+        - 比如说，一个`java.util.concurrent.CopyOnWriteArrayList`的实例是一个不可变的源，根据这个源创建的分割迭代器会报告一个IMMUTABLE的特性值。
+    - 源自己管理并发修改。
+        - 比如说，`java.util.concurrent.ConcurrentHashMap`的键的集合是一个并发的源,通过这个源创建的分割迭代器会报告一个CONCURRENT的特性值。
+    - 可变的源提供一个延迟绑定和快速失败的分割迭代器。
+        - 延迟绑定会缩短修改影响计算的时间窗口，快速失败尽最大的努力，在遍历开始后检测到结构的修改并抛出`ConcurrentModificationException`.比如说，ArrayList以及JDK中很
+            多其他的非并发的集合的类，都提供延迟绑定的，快速失败的分割迭代器。
+    - 可变的源提供非延迟绑定的但快速失败的分割迭代器。
+        - 源增加了抛出`ConcurrentModificationException`异常的可能性，因为潜在的修改的窗口被放大了(因为上面一条中说到，延迟绑定会缩短这个时间窗口，这里提供非延迟绑定
+            的分割迭代器就不会缩短这个窗口)。
+    - 可变的源提供非快速失败的但延迟绑定的分割迭代器。
+        - 在遍历开始之后源会有任意的，不确定的行为的风险。
+    - 可变的源提供非延迟绑定的并且非快速失败的分割迭代器。
+        - 源增加了任意的，不确定的行为的风险，因为创建后可能发生没检测到的修改。
+- 这里有个类(并不是特别有用，用来阐述说明)，这个类维护了一个数组，实际的数据是在偶数的位置上存放，不相关的标签数据存放在奇数位置上，这个数组的分割迭代器只关注偶数位置上的数据：
+    ```java
+    class TaggedArray<T> {
+      private final Object[] elements; // immutable after construction
+      TaggedArray(T[] data, Object[] tags) {
+        int size = data.length;  
+        //奇数位置个数应该与偶数位置个数相等
+        if (tags.length != size) throw new IllegalArgumentException();
+        this.elements = new Object[2 * size];
+        for (int i = 0, j = 0; i < size; ++i) {
+          elements[j++] = data[i];
+          elements[j++] = tags[i];
+        }
+      }
+      public Spliterator<T> spliterator() {
+        return new TaggedArraySpliterator<>(elements, 0, elements.length);
+      }
+      static class TaggedArraySpliterator<T> implements Spliterator<T> {
+        private final Object[] array;
+        // current index, advanced on split or traversal，即当前索引，在分割或遍历时加1
+        private int origin; 
+        // one past the greatest index，表示分割迭代器能前进到哪个位置上，
+        private final int fence; 
+        TaggedArraySpliterator(Object[] array, int origin, int fence) {
+          this.array = array; this.origin = origin; this.fence = fence;
+        }
+        public void forEachRemaining(Consumer<? super T> action) {
+          for (; origin < fence; origin += 2)
+            action.accept((T) array[origin]);
+        }
+        public boolean tryAdvance(Consumer<? super T> action) {
+          if (origin < fence) {
+            action.accept((T) array[origin]);
+            //因为不考虑标签数据，所以直接+2
+            origin += 2;
+            return true;
+          }
+          else // cannot advance
+            return false;
+        }
+        public Spliterator<T> trySplit() {
+          int lo = origin; // divide range in half
+          int mid = ((lo + fence) >>> 1) & ~1; // force midpoint to be even
+          if (lo < mid) { // split out left half
+            origin = mid; // reset this Spliterator's origin
+            return new TaggedArraySpliterator<>(array, lo, mid);
+          }
+          else       // too small to split
+            return null;
+        }
+        public long estimateSize() {
+          return (long)((fence - origin) / 2);
+        }
+        public int characteristics() {
+          return ORDERED | SIZED | IMMUTABLE | SUBSIZED;
+        }
+      }
+    }
+    ```
+- 作为一个并行计算框架的案例，比如`java.util.stream`这个包，会在一个并行计算中使用分割迭代器，这里有一种实现与之相关的并行的forEach的实现方式，它描述了分割子任务的方法
+    直到分割后的the estimated amount(估计的数量)足够小以执行串行操作。这里我们假定处理子任务的顺序无关紧要，不同的任务可能会进一步分割，并发处理元素时也以一个不确定的顺序，
+    这个例子使用`java.util.concurrent.CountedCompleter`,与其他的并行任务的类用法类似：
+    ```java
+    static <T> void parEach(TaggedArray<T> a, Consumer<T> action) {
+      Spliterator<T> s = a.spliterator();
+      long targetBatchSize = s.estimateSize() / (ForkJoinPool.getCommonPoolParallelism() * 8);
+      new ParEach(null, s, action, targetBatchSize).invoke();
+    }
+    static class ParEach<T> extends CountedCompleter<Void> {
+      final Spliterator<T> spliterator;
+      final Consumer<T> action;
+      final long targetBatchSize;
+      ParEach(ParEach<T> parent, Spliterator<T> spliterator,
+              Consumer<T> action, long targetBatchSize) {
+        super(parent);
+        this.spliterator = spliterator; this.action = action;
+        this.targetBatchSize = targetBatchSize;
+      }
+      public void compute() {
+        Spliterator<T> sub;
+        while (spliterator.estimateSize() > targetBatchSize &&
+               (sub = spliterator.trySplit()) != null) {
+          addToPendingCount(1);
+          new ParEach<>(this, sub, action, targetBatchSize).fork();
+        }
+        spliterator.forEachRemaining(action);
+        propagateCompletion();
+      }
+    }
+    ```
+- 如果系统布尔值`org.openjdk.java.util.stream.tripwire`被设成true，那么操作原生子类型的特化时进行装箱操作，就会报告一个警告信息。
+- java.util.Spliterator.**tryAdvance**
+    - 如果有剩余的元素，那么对剩余元素就会执行给定的动作，同时返回true，否则返回false。如果Spliterator是ORDERED,那么动作就会按照顺序执行。由动作抛出来的异常会返回给调用者。
+- java.util.Spliterator.**forEachRemaining**
+    - 针对剩余的每个元素都执行给定的动作，当前线程中以串行方式执行，直到所有的元素都被处理或这个动作抛出了异常。如果Spliterator是ORDERED,那么动作就会按照顺序执行。由动作抛出来的
+        异常会返回给调用者。默认的实现会重复调用`java.util.Spliterator.tryAdvance`直到返回false，在必要时会被重写。
                    
     
 
