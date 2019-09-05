@@ -539,16 +539,94 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
 - java.util.Spliterator.**forEachRemaining**
     - 针对剩余的每个元素都执行给定的动作，当前线程中以串行方式执行，直到所有的元素都被处理或这个动作抛出了异常。如果Spliterator是ORDERED,那么动作就会按照顺序执行。由动作抛出来的
         异常会返回给调用者。默认的实现会重复调用`java.util.Spliterator.tryAdvance`直到返回false，在必要时会被重写。
-                   
-    
-
-    
-
-
-        
-
-
-
-
-    
- 
+- java.util.Spliterator.**trySplit**
+    - 如果当前这个分割迭代器可以被分割， 就会返回一个新的分割迭代器，里面涵盖着从这个方法里面返回的元素，剩下的元素在当前这个分割迭代器里面。 两个分割迭代器中没有交叉的元素。            
+    - 如果这个分割迭代器是ORDERED,那么返回来的分割迭代器必须包含一个严格的元素前缀(即返回的分割迭代器也是有序的)。
+    - 除非这个分割迭代器涵盖的元素是无限的，否则重复调用trySplit必须最终返回null(即一直分割一直分割，到最后元素不能再分割了就返回空)。如果返回值不为空：
+        - 在分割之前`java.util.Spliterator.estimateSize`所返回的那个值，必须大于或等于分割完之后当前分割迭代器的estimateSize并且大于或等于返回来的那个分割迭代器的estimateSize。
+        - 如果当前的分割迭代器是SUBSIZED(SUBSIZED表示当前分割迭代器是分割完之后的并且大小确定)，那么在分割之前，这个分割迭代器的estimateSize大小必须等于当前这个分割迭代器(即分割之后)
+            的estimateSize加上返回来的那个分割迭代器的estimateSize。
+    - 这个方法出于任何一种原因都有可能返回空值。原因包括原来的分割迭代器就是空的，开始遍历后就无法进行分割，数据结构的限制，效率的考量等等。
+    - 理想情况下不需要遍历时，trySplit方法将它的元素高效的恰好分成两半，允许平衡并行的计算。许多情况下违背了这种理想做法只保留高效率，比如说只近似分割一个近似平衡的树，或者树的叶子
+        结点只包含一两个元素，不能再对结点进行分割。然而极度不平衡的或者没有效率的trySplit会导致并行效率急剧降低。
+    - 返回一个分割迭代器包含部分元素，如果当前这个分割迭代器不能被分割就返回空。
+- java.util.Spliterator.**estimateSize**
+    - 返回会被`java.util.Spliterator.forEachRemaining`遍历的元素数量的估算值，如果元素数量无限大或者未知或者计算成本特别高的话，会返回一个Long的最大值。
+    - 如果当前这个分割迭代器是SIZED并且还没有被部分遍历或分割，或者当前这个分割迭代器是SUBSIZED，还没有被部分的进行遍历，那么estimate(即对这个分割迭代器执行estimateSize
+        方法的返回值)一定是一个精确的值，是被一个完整的遍历所遇到的元素的数量值，否则，estimate可能就不是一个精确的值，estimate必须随着trySplit方法的调用而减小(分割迭代器
+        被分割，里面的元素数量肯定会减小).
+    - 甚至一个不太精确的估算，通常都是有用的并且计算起来成本不高的。比如说，一个近似平衡的二叉树的sub-spliterator会返回一个估算它的父节点的元素一半的值，如果根分割迭代器不维护一个精确
+        的值，那么就会根据它的最大深度变成它的2次幂。
+- java.util.Spliterator.**getExactSizeIfKnown**
+    - 一个简便的方法，如果当前这个分割迭代器包含SIZED特性值,就返回`java.util.Spliterator.estimateSize`计算的值，否则返回-1.
+- java.util.Spliterator.**characteristics**
+    - 返回分割迭代器及其元素的特性值的集合，结果由ORDERED,DISTINCT,SORTED,SIZED,NONNULL,IMMUTABLE,CONCURRENT,SUBSIZED表示。对于一个给定的分割迭代器，在trySplit调用之前或trySplit调用
+        当中重复的调用characteristics方法，永远都会返回相同的结果。
+    - 如果分割迭代器返回一个不一致的特性值的集合，那么对于分割迭代器的任何计算都是不受保障的。
+    - 对于一个给定的分割迭代器，在分割之前的特性值可能会与分割后不同，对于具体的例子参考SIZED，SUBSIZED，CONCURRENT
+- java.util.Spliterator.**hasCharacteristics**
+    - 如果当前这个分割迭代器包含所有给定的特性值就返回true.
+    - 默认实现中，如果给定的特性值对应的位设置了就会返回true(即如果当前这个分割迭代器包含传进来的特性就返回true).
+- java.util.Spliterator.**getComparator**
+    - 如果分割迭代器的源通过`java.util.Comparator`之后是SORTED, 那么就返回这个比较器。如果源在`java.lang.Comparable`的自然顺序下是SORTED,就返回空。否则，如果源不是SORTED的,
+        就抛出`java.lang.IllegalStateException`.
+    - 默认实现总是抛出`java.lang.IllegalStateException`
+- java.util.Spliterator.**ORDERED**
+    - 这个特性值表示对于元素遇到的顺序是定义好的。如果这样，这个分割迭代器就确保trySplit方法按照严格的顺序对元素分割，tryAdvance方法按照严格的顺序对元素递进，forEachRemaining方法
+        会按照遇到的元素顺序执行给定的动作。       
+    - 如果一个Collection的iterator记录了顺序，那么这个Collection就有一个遇到的顺序。如果是这样，那么这个集合遇到的顺序就与iterator记录的顺序一样。否则，一个集合就没有一个遇到的顺序。
+    - 对于任何的List来说，遇到的顺序被确保是增加的索引的顺序。但是对基于hash的集合比如HashSet来说，顺序没有保障。一个报告ORDERED的分割迭代器的客户端在并发计算中被期望保留遇到的顺序。
+- java.util.Spliterator.**DISTINCT**
+    - 这个特性值表示，对于每个遇到的元素x和y，x.equals(y)为假。比如一个基于Set的分割迭代器。
+- java.util.Spliterator.**SORTED**
+    - 这个特性值表示，遇到的顺序会遵循一个排序的顺序。如果这样，那么getComparator方法就会返回与之相关的比较器，如果所有元素时可比较的并且已经按自然顺序排好序就会返回null.
+    - 一个分割迭代器如果返回SORTED，就必须返回ORDERED。
+    - JDK中的集合类如果实现了`java.util.NavigableSet`或者`java.util.SortedSet`就会报告一个SORTED.  
+- java.util.Spliterator.**SIZED**
+    - 这个特性值表示，在遍历之前或分割之前由estimateSize()方法返回的值表示一个有限的大小。在没有对源进行结构化修改时，表示元素数量的一个精确值会被一个完整的遍历所遇到。
+    - 大部分对于包含全部集合元素的Collections的分割迭代器都会报告这个特性值。sub-spliterators(子分割迭代器，即分割之后返回的分割迭代器及剩下的分割迭代器)比如HashSet,涵盖部分元素的，则不是这样。
+- java.util.Spliterator.**IMMUTABLE**
+    - 这个特性值表示元素的源结构不能被修改，即元素不能被添加、替换或移除，这些改变在遍历中不会发生。一个分割迭代器如果在遍历时检测到结构上发生变化，就不应该报告IMMUTABLE或者CONCURRENT，就被期望
+        有一个documented policy ，比如说抛出`java.util.ConcurrentModificationException`。
+- java.util.Spliterator.**CONCURRENT** 
+    - 这个特性值表示元素的源可以安全的由多个线程进行并发修改(允许添加，替换，删除)还不需要外部的同步化操作。如果这样，那么这个分割迭代器就被期望有一个documented policy关于在遍历时修改的影响。
+    - 一个顶层的分割迭代器不应该同时返回CONCURRENT和SIZED，因为在并发修改时源的大小可能会发生变化。这样的分割迭代器是不一致的，在进行任何计算时也得不到保证。如果子分割迭代器的大小已知并且在遍历时
+        添加或者删除元素没有反应出来就可能报告SIZED。
+    - 大多数并发的集合都会维护一个一致性的策略来保证在分割迭代器构建时元素的精确度，但可能不会反应出子分割迭代器的增加或删除。
+- - java.util.Spliterator.**SUBSIZED** 
+    - 这个特性值表示trySplit返回的所有分割迭代器都应该是SIZED或者SUBSIZED，无论是直接的子分割迭代器或者间接的子分割迭代器都是SIZED.
+    - 一个分割迭代器如果没有报告SUBSIZED所要求的SIZE，那么就是不一致的并且在使用这个分割迭代器进行任何计算都得不到保证。
+    - 有些分割迭代器，比如说几乎平衡的二叉树的这样一个顶层分割迭代器，就会报告SIZED,而不是报告SUBSIZED,因为我们知道整棵树的大小，但不知道子树的大小。
+- java.util.Spliterator.**OfPrimitive**
+    - 一个专门针对原生值(int long double)的分割迭代器
+    - `public interface OfPrimitive<T, T_CONS, T_SPLITR extends Spliterator.OfPrimitive<T, T_CONS, T_SPLITR>> extends Spliterator<T>`  
+         - T：由分割迭代器所返回的元素的类型，这个类型必须是原生类型的包装类型，比如说int类型的包装类型Integer。
+         - T_CONS：primitive consumer的类型，它必须是`java.util.function.Consumer`针对T的原生特化，比如说针对Integer的特化`java.util.function.IntConsumer`
+         - T_SPLITR：原生的分割迭代器的类型，它必须是分割迭代器针对T的原生特化，比如说针对Integer的特化`java.util.Spliterator.OfInt`
+- java.util.Spliterator.**OfInt**
+    - 特化为int值的分割迭代器
+    - java.util.Spliterator.OfInt.**tryAdvance(java.util.function.IntConsumer)**
+        - 实现的是`java.util.Spliterator.OfPrimitive`里的tryAdvance方法。
+    - java.util.Spliterator.OfInt.**tryAdvance(java.util.function.Consumer<? super java.lang.Integer>)**
+        ```java
+            default boolean tryAdvance(Consumer<? super Integer> action) {      
+                //action本身是Consumer类型，IntConsumer与Consumer本身没有继承的关系，但这里可以用 action instanceof IntConsumer，
+                // 因为：
+                //1.当给IntConsumer和Consumer的accept方法传入整型参数时，这两个accept函数一样。而这里action的泛型为? super Integer，
+                // 所以有可能符合action instanceof IntConsumer
+                //2.lambda是通过上下文来推断出来的，同一个lambda，在一个地方是这个类型，换个地方可能是另外一种类型。这两种类型，从面向对象角度来看，
+                //可能并没有继承的关系，但在函数式编程里可以存在
+                if (action instanceof IntConsumer) {
+                    return tryAdvance((IntConsumer) action);
+                }
+                else {
+                    if (Tripwire.ENABLED)
+                        Tripwire.trip(getClass(),
+                                      "{0} calling Spliterator.OfInt.tryAdvance((IntConsumer) action::accept)");
+                    return tryAdvance((IntConsumer) action::accept);
+                }
+            }
+        ```
+        - 实现的是`java.util.Spliterator`里的tryAdvance方法。
+        - 传入的动作本身是一个Consumer类型，如果这个动作是一个IntConsumer类型实例，那么会被强制转换为IntConsumer然后传递给`java.util.Spliterator.OfInt.tryAdvance(java.util.function.IntConsumer)`
+            否则，这个动作通过IntConsumer的参数进行装箱适配成IntConsumer的实例，然后再传递给`java.util.Spliterator.OfInt.tryAdvance(java.util.function.IntConsumer)`
