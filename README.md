@@ -616,6 +616,7 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
                 // 所以有可能符合action instanceof IntConsumer
                 //2.lambda是通过上下文来推断出来的，同一个lambda，在一个地方是这个类型，换个地方可能是另外一种类型。这两种类型，从面向对象角度来看，
                 //可能并没有继承的关系，但在函数式编程里可以存在
+                //参考代码： cn.andios.jdk8.stream.source包下ConsumerTest类
                 if (action instanceof IntConsumer) {
                     return tryAdvance((IntConsumer) action);
                 }
@@ -630,3 +631,45 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
         - 实现的是`java.util.Spliterator`里的tryAdvance方法。
         - 传入的动作本身是一个Consumer类型，如果这个动作是一个IntConsumer类型实例，那么会被强制转换为IntConsumer然后传递给`java.util.Spliterator.OfInt.tryAdvance(java.util.function.IntConsumer)`
             否则，这个动作通过IntConsumer的参数进行装箱适配成IntConsumer的实例，然后再传递给`java.util.Spliterator.OfInt.tryAdvance(java.util.function.IntConsumer)`
+### java.util.stream.AbstractPipeline
+- pipeline classes(管道类)的抽象父类，是流接口和原生特化的核心实现。会管理流管道的构建及计算。
+- 一个AbstractPipeline代表了一个流管道初始的一部分，封装了流的源以及零个或多个中间操作。每一个单个的AbstractPipeline对象通常被称为stages,每一个state要么描述流的源要么描述流一个的中间操作。
+- 一个具体的中间state通常通过一个AbstractPipeline来构建。一个shape-specific(形状特化)的管道类(比如说IntPipeline,DoublePipeline,LongPipeline)继承了AbstractPipeline
+    也是抽象的，一个operation-specific(特定操作)的具体类也是继承自它。AbstractPipeline包含了大多数计算管道的机制，并且实现了会被操作用到的方法。the shape-specific 
+    classes(形状特化的类)添加了一些辅助的方法用来处理将集合结果添加到shape-specific containers(形状相关的容器中)(即避免了自动装箱自动拆箱的操作)。
+- 当链接一个新的中间操作，或者执行一个终止操作后，这个流就被认为是被消费掉的，就不再允许其他的中间操作或终止操作在这个流上运行。
+- 对于串行流，以及没有stateful intermediate operations(状态化的中间操作)的并行流来说，管道的计算是在单个的过程(单个的过程即将所有的操作放一起，一次性完成)中来完成的。对于有
+    操作状态的并行流，执行就会被分成几段来进行，每一个有状态的操作都会标识为一段的结尾，每一段都会单独的进行计算，并且每一段的结果用作下一段的输入。在所有的情况中，直到终止操
+    作开始源数据都不会被消费。
+### java.util.stream.Sink
+- Sink是Consumer接口的扩展，用于在一个流管道的各个阶段处理值，还提供了额外的方法来管理大小的信息，控制的流程等等。在首次调用Sink的accept方法之前，你必须先调用begin()方法
+    来通知它数据要过来了(可选的通知数据量是多少)，所有数据发送过来之后，必须调用end()方法,调用完end()方法后就不应该再调用accept()方法，除非再次调用begin()方法。Sink可以
+    通过cancellationRequested()方法协作的发出信号说它不希望接收任何数据了，这样一个源就可以在发送更多的数据到Sink上之前判断是不是不接受数据了。
+- 一个Sink处于两种状态之一：一个是初始化状态；另一个是激活状态。它从初始状态开始，begin()方法会将它转为激活状态，end()方法又会将它转为初始状态，这样Sink就可以重用了。
+    数据接受方法(比如accept()方法)只在激活状态下才有用。
+- 一个流管道由一个源，零或多个中间阶段(比如filtering或mapping)以及一个终止阶段(比如汇聚或者for-each)，具体来说，考虑下面这个管道：
+    ```java
+    int longestStringLengthStartingWithA
+        = strings.stream()
+                 .filter(s -> s.startsWith("A"))
+                 .mapToInt(String::length)
+                 .max();
+    ```
+    这里，我们有三个阶段，过滤，映射，汇聚。过滤阶段会消耗字符串并且发出字符串的子集，映射阶段会消耗字符串并发出一些int值，汇聚阶段会消耗这些int值并计算出最大值。
+- **一个Sink实例用于表示管道中的每个阶段**，无论这个对象接收的是对象，int值，long值，或者double值。对于accept(Object),accept(int)方法来说，Sink有一个入口点，这样
+    我们就不需要针对每一个原生特化有专门的接口。上面这个管道的入口点是过滤阶段,它发送了一些元素到下游的映射阶段中，它又会发送一些整型值到到下游的汇聚阶段中。一个给定
+    阶段的Sink的实现期望知道下一个阶段的数据类型，与之类似，每个阶段都必须正确实现它的accept方法，
+- 链接的子类型比如`java.util.stream.Sink.ChainedInt`并不只实现了`java.util.stream.Sink.OfInt`,还维护了一个下游的字段来表示下游的Sink,并且实现了begin()方法和
+    end()方法，cancellationRequested()方法，用于委托下游的Sink。大部分中间操作的实现会使用这种链接，比如说，上面案例中的映射阶段可以这样：
+    ```java
+        IntSink is = new Sink.ChainedReference<U>(sink) {
+            public void accept(U u) {
+                downstream.accept(mapper.applyAsInt(u));
+            }
+        };
+    ```
+    这里，我们实现了`Sink.ChainedReference<U>`,意味着我们期望接收U类型元素作为输入，通过下游Sink的构造。因为一下个阶段期望接收整型，所当向下游Sink发送数据时我们必须调用
+    accept(int)方法。accept()方法通过映射从U类型到int类型并将结果值传给下游的Sink。
+### java.util.stream.Sink.ChainedReference
+- 抽象的Sink的实现，用于创建Sink的链，begin(),end(),cancellationRequested()等方法也会与下游的Sink链接起来，这个实现接收一个未知输入类型并生成一个Sink对象的下游的Sink，
+    实现的accept方法必须正确的调用下游Sink的accept方法。
