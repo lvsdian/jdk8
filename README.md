@@ -678,3 +678,16 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
 ### java.util.stream.Sink.ChainedReference
 - 抽象的Sink的实现，用于创建Sink的链，begin(),end(),cancellationRequested()等方法也会与下游的Sink链接起来，这个实现接收一个未知输入类型并生成一个Sink对象的下游的Sink，
     实现的accept方法必须正确的调用下游Sink的accept方法。
+### [Joda](https://www.joda.org/)
+- joda封装了一些java的类库。在jdk8之前，java的日期使用的`java.util.Calendar`,`java.util.Date`,但这两个类提供的API不够完美，比如计算15天之后的今天的日期必须程序员手动计算，
+    日期格式化使用类`java.text.SimpleDateFormat`，但这个类却不是线程安全的。Joda-Time是专门针对日期问题的类库，完美的解决了jdk8以前日期计算的问题，但在jdk8之后，推荐使用
+    jdk8，而不是joda,jdk8中的日期设计可以说是参照了joda-Time,有些类的名字或用法都一致。其他的模块，比如钱等等，joda也都有响应的解决方案：
+    - [Joda-Time](https://www.joda.org/joda-time/)
+    - [Joda-Primitives](https://www.joda.org/joda-primitives/)
+    - [Joda-Money](https://www.joda.org/joda-money/)
+    - [Joda-Convert](https://www.joda.org/joda-convert/)
+    - [Joda-Collect](https://www.joda.org/joda-collect/)  
+*参考代码见cn.andios.joda包下JodaTest1，JodaTest2，JodaTest3*
+### java8日期与时间
+*参考代码见cn.andios.joad包下Java8TimeTest类*
+    
