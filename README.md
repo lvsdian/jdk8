@@ -641,6 +641,11 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
 - 对于串行流，以及没有stateful intermediate operations(状态化的中间操作)的并行流来说，管道的计算是在单个的过程(单个的过程即将所有的操作放一起，一次性完成)中来完成的。对于有
     操作状态的并行流，执行就会被分成几段来进行，每一个有状态的操作都会标识为一段的结尾，每一段都会单独的进行计算，并且每一段的结果用作下一段的输入。在所有的情况中，直到终止操
     作开始源数据都不会被消费。
+- java.util.stream.AbstractPipeline.**opWrapSink**
+    - 接收一个Sink对象，这个Sink对象会接收当前这个操作的结果，再返回一个Sink,返回的Sink会接收操作的输入类型的元素并且会执行这个操作。然后将结果传递给所提供的Sink.
+    - 实现时可以使用flags这个参数来优化包装，比如说，如果输入已经是DISTINCT,那么`java.util.stream.Stream.distinct`就可以直接返回传进来的sink.  
+    `abstract Sink<E_IN> opWrapSink(int flags, Sink<E_OUT> sink);`  
+    参数(Sink<E_OUT> sink)是接收结果的,返回值(Sink<E_IN> )是接收元素，处理元素，如果有结果，会把结果传给参数(Sink<E_OUT> sink)。
 ### java.util.stream.Sink
 - Sink是Consumer接口的扩展，用于在一个流管道的各个阶段处理值，还提供了额外的方法来管理大小的信息，控制的流程等等。在首次调用Sink的accept方法之前，你必须先调用begin()方法
     来通知它数据要过来了(可选的通知数据量是多少)，所有数据发送过来之后，必须调用end()方法,调用完end()方法后就不应该再调用accept()方法，除非再次调用begin()方法。Sink可以
