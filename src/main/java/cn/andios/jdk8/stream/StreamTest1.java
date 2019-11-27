@@ -12,11 +12,14 @@ import java.util.stream.Stream;
 public class StreamTest1 {
     public static void main(String[] args) {
         //创建Stream
+        //1.Stream本身的方法
         Stream <String> stream1 = Stream.of("hello","world","hello world");
 
         String [] str = new String[]{"hello","world","hello world"};
+        //2.Arrays.stream
         Stream stream2 = Arrays.stream(str);
 
+        //3.list.stream
         List<String> list = Arrays.asList(str);
         Stream<String> stream3 = list.stream();
 

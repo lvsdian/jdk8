@@ -17,10 +17,11 @@
 做什么，由用户调用时确定。
 - andThen：`function1.andThen(function2).apply(a)`会先对a执行function1,再将结果执行function2，function1和function2具体
 做什么，由用户调用时确定。  
+*参考代码见cn.andios.jdk8包下FunctionTest*
 ##### BiFunction接口(两个输入参数，一个输出结果)
 - apply：`biFunction.apply(a,b)`将a,b两个输入参数执行某个操作，怎么操作由用户调用函数时确定。
 - andThen：`biFunction.andThen(function).apply(a,b)`将a，b两个参数执行biFunction的apply，再将结果执行function的apply操作。
-因为执行biFunction的apply后两个参数变为一个参数，所以biFunction没有compose方法。
+因为执行biFunction的apply后两个参数变为一个参数，所以biFunction没有compose方法。  
 *参考代码见cn.andios.jdk8包下FunctionTest2*
 - BiFunction实例  
 *参考代码见cn.andios.jdk8包下Person,PersonTest*
@@ -83,7 +84,7 @@
 *参考代码见cn.andios.jdk8.stream包下StreamTest3*
     - Streams为懒加载;对源的计算操作只有在进行终止操作时才会进行, 只有在需要时才会执行.    
 *参考代码见cn.andios.jdk8.stream包下StreamTest7*
-    - 一个流只能被操作一次.不然会报`java.lang.IllegalStateException`.  
+    - 一个流只能被操作一次.不然会报`java.lang.IllegalStateException: stream has already been operated upon or closed`.  
     - 和以前的Collection操作不同， Stream操作还有两个基础的特征：
         - Pipelining: 中间操作都会返回流对象本身。 这样多个操作可以串联成一个管道， 如同流式风格（fluent style）。 这样做可以对操作进行优化， 
 比如延迟执行(laziness)和短路( short-circuiting)。
@@ -202,8 +203,8 @@ Collector<Widget, ?, TreeSet<Widget>> intoSet =
 - 自定义收集器实现  
 *参考代码见cn.andios.jdk8.stream.source包下MyCollectorSetImpl*
 - java.util.stream.Collector.Characteristics.**IDENTITY_FINISH**  
-    在java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)中可以看到，如果collector的Characteristics中
-    有"IDENTITY_FINISH"，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
+    在`java.util.stream.ReferencePipeline.collect(java.util.stream.Collector<? super P_OUT,A,R>)`中可以看到，如果`collector`的`Characteristics`中
+    有`IDENTITY_FINISH`，那么finisher函数不会被调用，中间容器A直接被强转为最终容器R，如果没有"IDENTITY_FINISH"，那么会经过finisher方法转化。所以，
     如果我们不能确保中间容器类型到最终容器类型可以强转的话，不能加IDENTITY_FINISH,不然会出错。  
 - java.util.stream.Collector.Characteristics.**CONCURRENT**  
     表示收集器是并行的，意味着结果容器可以支持累加器函数并行的被调用，即多个线程同时操作同一个结果容器。如果不加CONCURRENT，那么几个线程就会操作几个结果容器，

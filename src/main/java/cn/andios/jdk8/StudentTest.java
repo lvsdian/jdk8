@@ -9,12 +9,12 @@ import java.util.function.Supplier;
  */
 public class StudentTest {
     public static void main(String[] args) {
-        //构造方法引用，创建Student对象实例
+        //lambda创建Student对象实例
         Supplier<Student> supplier1 = ()->new Student();
-        System.out.println(supplier1.get().getAge());;
+        System.out.println(supplier1.get().getAge());//20
 
+        //构造方法引用，创建Student对象实例
         Supplier<Student> supplier2 = Student::new;
-
-        System.out.println(supplier2.get().getAge());
+        System.out.println(supplier2.get().getAge());//20
     }
 }

@@ -17,7 +17,7 @@ public class StreamTest11 {
         //list1.stream().flatMap(item->item.split(" ")).distinct().forEach(System.out::println);
         //Array转Stream
         //                 map：空格分割成数组         flatMap：Stream<String []>打平成Stream<String>
-        list2.stream().map(item->item.split(" ")).flatMap(Arrays::stream).distinct().forEach(System.out::println);
+        list2.stream().map(item->item.split(" ")).flatMap(Arrays::stream).distinct().forEach(System.out::println);//hello world welcome
 
     }
 }

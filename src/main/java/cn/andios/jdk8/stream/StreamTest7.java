@@ -25,6 +25,6 @@ public class StreamTest7 {
                     System.out.println("test");
                     return result;
                 }
-        ).forEach(System.out::println);
+        ).forEach(System.out::println);//test Hello test World test Hello world
     }
 }

@@ -13,10 +13,10 @@ public class BinaryOperatorTest {
         BinaryOperatorTest binaryOperatorTest = new BinaryOperatorTest();
 
         //传入两个Integer类型，返回的结果也是Integer类型
-        System.out.println(binaryOperatorTest.operate(1,2,(value1,value2)->value1 + value2));
+        System.out.println(binaryOperatorTest.operate(1,2,(value1,value2)->value1 + value2));//3
 
-        System.out.println(binaryOperatorTest.getShort("hello","world",(a,b)-> a.length() - b.length()));;
-        System.out.println(binaryOperatorTest.getShort("hello","world",(a,b)->a.charAt(0) - b.charAt(0)));
+        System.out.println(binaryOperatorTest.getShort("hello","world",(a,b)-> a.length() - b.length()));//hello
+        System.out.println(binaryOperatorTest.getShort("hello","world",(a,b)->a.charAt(0) - b.charAt(0)));//hello
     }
 
     public Integer operate(Integer a,Integer b,BinaryOperator<Integer> binaryOperator){

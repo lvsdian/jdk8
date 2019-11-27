@@ -14,13 +14,18 @@ public class FunctionTest {
          * 如果是普通的面向对象，函数的行为事先定义好，后面只是调用
          */
         FunctionTest functionTest = new FunctionTest();
+        int val;
+        String str;
         //Function的apply方法，将输入参数进行apply操作，具体怎么操作由用户调用方法时输入
         //statement
-        functionTest.compute(1,value->{return  2 * value;});
+        val = functionTest.compute(1,value->{return  3 * value;});
+        System.out.println(val);//3
         //expression
-        functionTest.compute(1,value->2*value);
+        val = functionTest.compute(1,value->2*value);
+        System.out.println(val);//2
 
-        functionTest.convert(1,value->String.valueOf(value+"hello world"));
+        str = functionTest.convert(1,value->String.valueOf(value+"hello world"));
+        System.out.println(str);//1hello world
 
 
     }

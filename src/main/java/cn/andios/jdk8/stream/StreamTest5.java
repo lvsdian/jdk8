@@ -16,7 +16,7 @@ public class StreamTest5 {
     public static void main(String[] args) {
         //将这个list中的所有元素字母变为大写
         List<String> list = Arrays.asList("hello","world","hello world");
-        list.stream().map(String::toUpperCase).collect(Collectors.toList()).forEach(System.out::println);
+        list.stream().map(String::toUpperCase).collect(Collectors.toList()).forEach(System.out::println);//HELLO  WORLD  HELLO WORLD
 
 
         //每个stream里面是多个list，list里面装的integer

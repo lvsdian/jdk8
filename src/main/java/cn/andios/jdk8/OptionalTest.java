@@ -18,12 +18,12 @@ public class OptionalTest {
         //}
 
         //打印hello
-        optional.ifPresent(item-> System.out.println(item));
+        optional.ifPresent(item-> System.out.println(item));//hello
         //打印hello
-        optional.ifPresent(System.out::println);
+        optional.ifPresent(System.out::println);//hello
 
-        System.out.println(optional.orElse("world"));
+        System.out.println(optional.orElse("world"));//hello
 
-        System.out.println(optional.orElseGet(()->"heihei"));
+        System.out.println(optional.orElseGet(()->"heihei"));//hello
     }
 }

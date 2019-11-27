@@ -16,19 +16,26 @@ public class PredicateTest2 {
         PredicateTest2 predicateTest = new PredicateTest2();
 
         //test方法判断参数是否符合条件，返回true或false
-        predicateTest.conditionFilter(list,item->item % 2 ==0);
+        predicateTest.conditionFilter(list,item->item % 2 ==0);//2 4 6 8 10
+
+        System.out.println("------------------");
 
         //and方法：判断两个test方法的与
-        predicateTest.conditionFilter2(list,item->item > 5,item->item % 2 == 0);
+        predicateTest.conditionFilter2(list,item->item > 5,item->item % 2 == 0);//6 8 10
+
+        System.out.println("------------------");
 
         //or方法：判断两个test方法的或
-        predicateTest.conditionFilter3(list,item->item > 5,item->item % 2 == 0);
+        predicateTest.conditionFilter3(list,item->item > 5,item->item % 2 == 0);//2 4 6 7 8 9 10
+
+        System.out.println("------------------");
 
         //negate方法：将test取反
-        predicateTest.conditionFilter4(list,item->item > 5);
+        predicateTest.conditionFilter4(list,item->item > 5);//1 2 3 4 5
 
-        System.out.println(predicateTest.isEqual("test"));
-        System.out.println(predicateTest.isEqual("test").test("test"));
+        //Predicate.isEqual(object)返回的是Predicate对象
+        System.out.println(predicateTest.isEqual("test"));//java.util.function.Predicate$$Lambda$10/2129789493@27d6c5e0
+        System.out.println(predicateTest.isEqual("test").test("test"));//true
     }
 
     public void conditionFilter(List<Integer> list, Predicate<Integer> predicate){

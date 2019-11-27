@@ -12,9 +12,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class StreamTest9 {
     public static void main(String[] args) {
-        List<String> list1 = new ArrayList<>(5000000);
-        List<String> list2 = new ArrayList<>(5000000);
-        for (int i = 0; i < 5000000; i++) {
+        List<String> list1 = new ArrayList<>(500000);
+        List<String> list2 = new ArrayList<>(500000);
+        for (int i = 0; i < 500000; i++) {
             list1.add(UUID.randomUUID().toString());
             list2.add(UUID.randomUUID().toString());
         }
@@ -32,7 +32,7 @@ public class StreamTest9 {
 
         long millis1 = TimeUnit.NANOSECONDS.toMillis(endTime1 - startTime1);
         long millis2 = TimeUnit.NANOSECONDS.toMillis(endTime2 - startTime2);
-        System.out.println("串行流排序耗时："+ millis1);
-        System.out.println("并行流排序耗时："+ millis2);
+        System.out.println("串行流排序耗时："+ millis1);//串行流排序耗时：526
+        System.out.println("并行流排序耗时："+ millis2);//并行流排序耗时：232
     }
 }

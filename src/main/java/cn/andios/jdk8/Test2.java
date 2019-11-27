@@ -28,12 +28,12 @@ public class Test2 {
             public void test() {
                 System.out.println("myTest1");
             }
-        });
+        });//1 myTest1 2
 
         System.out.println("------------------------");
         test2.myTest(()->{
             System.out.println("myTest2");
-        });
+        });//1 myTest2 2
 
         System.out.println("------------------------");
         //5.lambda表达式是对象，必须依附于一类特别的对象类型--函数式接口
@@ -42,6 +42,7 @@ public class Test2 {
         };
 
         System.out.println("------------------------");
-        System.out.println(MyInterface.class.getInterfaces()[0]);
+        System.out.println(MyInterface.class.getInterfaces()[0]);//java.lang.ArrayIndexOutOfBoundsException: 0
+        System.out.println(myInterface.getClass().getInterfaces()[0]);//1
     }
 }

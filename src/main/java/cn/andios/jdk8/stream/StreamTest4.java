@@ -23,6 +23,7 @@ public class StreamTest4 {
         //toArray函数参数为IntFunction这个函数接口，接口的int型参数(比如这里的length)为返回的数组的长度
         //String [] strArray = stream1.toArray(length->new String[length]);
         String [] strArray = stream1.toArray(String[]::new);
+
         //字符串数组转为list
         Arrays.asList(strArray).forEach(System.out::println);
 
@@ -31,15 +32,17 @@ public class StreamTest4 {
         //stream直接转为list---collect方法：
         //1.直接调用Collectors.toList()方法。
         List<String> collect2 = stream2.collect(Collectors.toList());
-        System.out.println(collect2);
+        System.out.println("collect2："+collect2);
 
         Stream <String> stream3 = Stream.of("hello","world","hello world");
-        //2.collect的重载，第一个参数是Supplier，返回最终的结果容器；
+        //2.collect的重载
+        //  第1个参数是Supplier，返回最终的结果容器；
         //  第2个参数是BiConsumer，遍历stream中的每个item,并添加(accumulator,累加)到容器中；
         //  第3个参数还是BiConsumer，将第2步的每个list都添加到最终的要返回的list中，最后返回这个list(即theList1)
+
         //ArrayList<String> collect2 = stream2.collect(() -> new ArrayList<>(), (theList, item) -> theList.add(item),(theList1, theList2) -> theList1.addAll(theList2));
         ArrayList<String> collect3 = stream3.collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-        System.out.println(collect3);
+        System.out.println("collect3："+collect3);
 
 
         //stream直接转为list---collect方法的重载

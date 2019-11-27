@@ -17,9 +17,9 @@ public class JodaTest3 {
         //项目中，服务器端存储UTC时间，客户端拿到服务器端的UTC时间后再根据所在时区即可获得本地时间。
         //这样，就算有多个不同时区的客户端，时间也不会紊乱
 
-        System.out.println(JodaTest3.convertUTC2Date("2019-09-09T10:26:07.632Z"));
-        System.out.println(JodaTest3.convertDate2UTC(new Date()));
-        System.out.println(JodaTest3.convertDate2LocalByDateFormat(new Date(),"yyyy-MM-dd HH:mm:ss"));
+        System.out.println(JodaTest3.convertUTC2Date("2019-09-09T10:26:07.632Z"));//Mon Sep 09 18:26:07 CST 2019
+        System.out.println(JodaTest3.convertDate2UTC(new Date()));//2019-11-26T13:18:36.293Z
+        System.out.println(JodaTest3.convertDate2LocalByDateFormat(new Date(),"yyyy-MM-dd HH:mm:ss"));//2019-11-26 21:18:36
 
     }
 

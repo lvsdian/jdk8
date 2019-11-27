@@ -28,9 +28,9 @@ public class MethodReferenceTest {
 
     public static void main(String[] args) {
         Student student1 = new Student("张三1",991);
-        Student student2 = new Student("张三2",992);
-        Student student3 = new Student("张三3",993);
-        Student student4 = new Student("张三4",994);
+        Student student2 = new Student("张三3",992);
+        Student student3 = new Student("张三4",993);
+        Student student4 = new Student("张三2",994);
 
         List<Student> studentList = Arrays.asList(student1,student2,student3,student4);
 
@@ -48,6 +48,8 @@ public class MethodReferenceTest {
         MethodReferenceTest test = new MethodReferenceTest();
         //getString1中参数为Supplier接口，不接收参数有一个返回值，所以这里调用String的无参构造
         System.out.println(test.getString1(String::new));
+
+
         //getString2中参数为 字符串,Function接口，接收一个参数有一个返回值，所以这里调用String的一个参数的构造
         System.out.println(test.getString2("hello",String::new));
 

@@ -60,6 +60,6 @@ public class MyCollectorSetImpl<T> implements Collector<T,Set<T>,Set<T>>{
     public static void main(String[] args) {
         List<String> list = Arrays.asList("hello","world","welcome");
         Set<String> set = list.stream().collect(new MyCollectorSetImpl<>());
-        System.out.println(set);
+        System.out.println(set);//[world, hello, welcome]
     }
 }

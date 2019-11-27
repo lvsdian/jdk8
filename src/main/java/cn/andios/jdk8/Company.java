@@ -26,4 +26,12 @@ public class Company {
     public void setEmployees(List<Employee> employees) {
         this.employees = employees;
     }
+
+    @Override
+    public String toString() {
+        return "Company{" +
+                "name='" + name + '\'' +
+                ", employees=" + employees +
+                '}';
+    }
 }

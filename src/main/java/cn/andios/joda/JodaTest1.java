@@ -17,6 +17,6 @@ public class JodaTest1 {
         intList.add(1);
         intList.add(2);
 
-        intList.forEach(System.out::println);
+        intList.forEach(System.out::println);//1 2
     }
 }
